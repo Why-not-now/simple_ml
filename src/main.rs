@@ -3,7 +3,7 @@ use simple_ml::datasets::{Data, DataClass};
 use simple_ml::layer::{DenseLayer, Full, Layer};
 use simple_ml::loss::{CategoricalLoss, Loss, SoftmaxCategoricalLoss};
 use simple_ml::model::Model;
-use simple_ml::optimiser::BasicOptimiser;
+use simple_ml::optimiser::{AdamOptimiser};
 use simple_ml::{datasets, split_test};
 
 fn main() {
@@ -56,8 +56,8 @@ fn main() {
     //         .into(),
     // );
     let loss = SoftmaxCategoricalLoss;
-    let optimiser = BasicOptimiser::new(0.005, 0.);
-    // let optimiser = AdamOptimiser::new_default();
+    // let optimiser = BasicOptimiser::new(0.005, 0.);
+    let optimiser = AdamOptimiser::new_default();
     let mut model = Model::new(layers, loss, optimiser);
 
     const N: usize = 40;
@@ -127,7 +127,7 @@ fn main() {
     }
 
     for i in 0..10000 {
-        // let data = datasets::spiral_data(10000, 3, &mut rng);
+        let data = datasets::spiral_data(10000, 3, &mut rng);
         let (train, test) = split_test(data.clone(), 0.2, Some(&mut rng));
         let test_len = test.len();
 
@@ -145,10 +145,12 @@ fn main() {
         }
 
         let mut accurate = 0.;
-        let mut total_loss = 0.;
+        let mut data_loss = 0.;
+        let mut reg_loss = 0.;
         for data in &test {
             let result = model.predict(data.vector());
-            total_loss += CategoricalLoss.train( result, &mut rng).loss_fast(data.class().into());
+            data_loss += CategoricalLoss.train( result, &mut rng).loss_fast(data.class().into());
+            reg_loss += model.loss();
             if result
                 .iter()
                 .enumerate()
@@ -162,10 +164,11 @@ fn main() {
         }
 
         let accuracy = accurate / test_len as f64;
-        let loss = total_loss / test_len as f64;
         println!("{accuracy}");
-        println!("{loss}");
-        // println!("{model:?}");
+        println!("data loss: {}", data_loss / test_len as f64);
+        println!("reg loss: {}", reg_loss / test_len as f64);
+        println!("total loss: {}", (data_loss + reg_loss) / test_len as f64);
+        println!();
 
         let mut grid = [['.'; N]; N];
         for j in 0..N {

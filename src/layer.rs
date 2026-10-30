@@ -17,6 +17,7 @@ pub trait Full<const I: usize, const O: usize> {
     ) -> (Vector<f64, I>, Self::Loss);
     fn predict(&self, inputs: Vector<f64, I>) -> Vector<f64, O>;
     fn update(&mut self, loss: Self::Loss);
+    fn loss(&self) -> f64;
 }
 
 pub trait Layer<const I: usize, const O: usize> {

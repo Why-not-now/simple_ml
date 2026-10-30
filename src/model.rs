@@ -72,6 +72,10 @@ where
         self.loss.update(loss_data);
         self.optimiser.finish_iteration();
     }
+
+    fn loss(&self) -> f64 {
+        self.layer.loss() + self.loss.inner_loss()
+    }
 }
 
 impl<L, F, Q, const I: usize, const O: usize> Model<L, F, Q, I, O>

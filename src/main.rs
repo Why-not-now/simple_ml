@@ -1,21 +1,23 @@
+use rand::seq::SliceRandom;
 use simple_ml::activation::{ActivationLayer, DropoutActivation, ReluActivation};
 use simple_ml::datasets::{Data, DataClass};
 use simple_ml::layer::{DenseLayer, Full, Layer};
 use simple_ml::loss::{CategoricalLoss, Loss, SoftmaxCategoricalLoss};
 use simple_ml::model::Model;
-use simple_ml::optimiser::{AdamOptimiser};
+use simple_ml::optimiser::AdamOptimiser;
 use simple_ml::{datasets, split_test};
 
 fn main() {
     let mut rng = rand::rng();
 
-    const CLEN: u8 = 10;
-    const CLENUSIZE: usize = CLEN as usize;
+    const C_LEN: u8 = 10;
+    const C_LEN_USIZE: usize = C_LEN as usize;
+    const N: usize = 50;
     type L1 = DenseLayer<2, 32>;
     type L2 = DenseLayer<32, 32>;
-    type L3 = DenseLayer<32, CLENUSIZE>;
+    type L3 = DenseLayer<32, C_LEN_USIZE>;
 
-    let data = datasets::spiral_data(100, CLEN, &mut rng);
+    let data = datasets::spiral_data(10000, C_LEN, &mut rng);
     let layers = L1::new(
         L1::normal_xavier_weights(&mut rng),
         L1::zero_bias(),
@@ -23,6 +25,34 @@ fn main() {
         5e-4,
         0.,
         5e-4,
+    );
+    let layers = layers.merge::<ActivationLayer<_>, _>(ReluActivation.into());
+    let layers = layers.merge(L2::new(
+        L2::normal_xavier_weights(&mut rng),
+        L2::zero_bias(),
+        0.,
+        5e-4,
+        0.,
+        5e-4,
+    ));
+    let layers = layers.merge::<ActivationLayer<_>, _>(
+        DropoutActivation::new(0.25)
+            .expect("droupout rate should be between 0 and 1")
+            .into(),
+    );
+    let layers = layers.merge::<ActivationLayer<_>, _>(ReluActivation.into());
+    let layers = layers.merge(L2::new(
+        L2::normal_xavier_weights(&mut rng),
+        L2::zero_bias(),
+        0.,
+        5e-4,
+        0.,
+        5e-4,
+    ));
+    let layers = layers.merge::<ActivationLayer<_>, _>(
+        DropoutActivation::new(0.25)
+            .expect("droupout rate should be between 0 and 1")
+            .into(),
     );
     let layers = layers.merge::<ActivationLayer<_>, _>(ReluActivation.into());
     let layers = layers.merge(L2::new(
@@ -57,7 +87,6 @@ fn main() {
     let optimiser = AdamOptimiser::new_default();
     let mut model = Model::new(layers, loss, optimiser);
 
-    const N: usize = 40;
     let mut grid = [['.'; N]; N];
 
     for datum in &data {
@@ -123,49 +152,50 @@ fn main() {
         println!("{row_str}")
     }
 
-    for i in 0..10000 {
-        // let data = datasets::spiral_data(10000, D, &mut rng);
-        let (train, test) = split_test(data.clone(), 0.2, Some(&mut rng));
-        let test_len = test.len();
+    let mut accurate = 0.;
+    let mut data_loss = 0.;
+    let mut reg_loss = 0.;
+    for data in &test {
+        let result = model.predict(data.vector());
+        data_loss += CategoricalLoss
+            .train(result, &mut rng)
+            .loss_fast(data.class().into());
+        reg_loss += model.loss();
+        if result
+            .iter()
+            .enumerate()
+            .max_by(|(_, l_val), (_, r_val)| l_val.total_cmp(r_val))
+            .expect("prediction should not be empty")
+            .0
+            == (data.class() as usize)
+        {
+            accurate += 1.;
+        }
+    }
+
+    let mut accuracy = accurate / test_len as f64;
+    println!("{accuracy}");
+    println!("data loss: {}", data_loss / test_len as f64);
+    println!("reg loss: {}", reg_loss / test_len as f64);
+    println!("total loss: {}", (data_loss + reg_loss) / test_len as f64);
+    println!();
+
+    for i in 0..100000 {
+        let mut train = datasets::spiral_data(32, C_LEN, &mut rng);
+        train.shuffle(&mut rng);
 
         for chunk in train.chunks(32) {
             let inputs: Vec<_> = chunk.iter().map(|data| data.vector()).collect();
             let expected: Vec<_> = chunk
                 .iter()
                 .map(|data| {
-                    let mut class = [0.; CLENUSIZE];
+                    let mut class = [0.; C_LEN_USIZE];
                     class[data.class() as usize] = 1.;
                     class.into()
                 })
                 .collect();
             model.train_batch_full(&inputs, &expected, &mut rng);
         }
-
-        let mut accurate = 0.;
-        let mut data_loss = 0.;
-        let mut reg_loss = 0.;
-        for data in &test {
-            let result = model.predict(data.vector());
-            data_loss += CategoricalLoss.train( result, &mut rng).loss_fast(data.class().into());
-            reg_loss += model.loss();
-            if result
-                .iter()
-                .enumerate()
-                .max_by(|(_, l_val), (_, r_val)| l_val.total_cmp(r_val))
-                .expect("prediction should not be empty")
-                .0
-                == (data.class() as usize)
-            {
-                accurate += 1.;
-            }
-        }
-
-        let accuracy = accurate / test_len as f64;
-        println!("{accuracy}");
-        println!("data loss: {}", data_loss / test_len as f64);
-        println!("reg loss: {}", reg_loss / test_len as f64);
-        println!("total loss: {}", (data_loss + reg_loss) / test_len as f64);
-        println!();
 
         let mut grid = [['.'; N]; N];
         for j in 0..N {
@@ -186,9 +216,55 @@ fn main() {
             }
         }
 
+        let mut debug = String::new();
+
+        debug.push_str(&format!("{accuracy}\n"));
+        debug.push_str(&format!("data loss: {}\n", data_loss / test_len as f64));
+        debug.push_str(&format!("reg loss: {}\n", reg_loss / test_len as f64));
+        debug.push_str(&format!(
+            "total loss: {}\n",
+            (data_loss + reg_loss) / test_len as f64
+        ));
+        debug.push('\n');
         for row in grid {
             let row_str: String = row.iter().flat_map(|v| [*v, ' ']).collect();
-            println!("{row_str}")
+            debug.push_str(&row_str);
+            debug.push('\n');
         }
+        println!("{debug}");
+
+        if i % 100 != 0 {
+            continue;
+        }
+        let test = datasets::spiral_data(1000, C_LEN, &mut rng);
+        let test_len = test.len();
+
+        accurate = 0.;
+        data_loss = 0.;
+        reg_loss = 0.;
+        for data in &test {
+            let result = model.predict(data.vector());
+            data_loss += CategoricalLoss
+                .train(result, &mut rng)
+                .loss_fast(data.class().into());
+            reg_loss += model.loss();
+            if result
+                .iter()
+                .enumerate()
+                .max_by(|(_, l_val), (_, r_val)| l_val.total_cmp(r_val))
+                .expect("prediction should not be empty")
+                .0
+                == (data.class() as usize)
+            {
+                accurate += 1.;
+            }
+        }
+
+        accuracy = accurate / test_len as f64;
+        // println!("{accuracy}");
+        // println!("data loss: {}", data_loss / test_len as f64);
+        // println!("reg loss: {}", reg_loss / test_len as f64);
+        // println!("total loss: {}", (data_loss + reg_loss) / test_len as f64);
+        // println!();
     }
 }

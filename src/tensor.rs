@@ -861,3 +861,73 @@ impl<T: Sum<T> + Mul<Output = T> + Clone, const H: usize, const M: usize> Matrix
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vec_dot_vec() {
+        let vector_1: Vector<_, _> = [2, 5, 9, 4].into();
+        let vector_2: Vector<_, _> = [4, 3, 1, 2].into();
+
+        assert_eq!(40, vector_1.dot_vec(&vector_2))
+    }
+
+    #[test]
+    fn vec_outer_vec() {
+        let vector_1: Vector<_, _> = [2, 5, 9, 4].into();
+        let vector_2: Vector<_, _> = [4, 3].into();
+
+        assert_eq!(
+            Matrix::<_, _, _>::from([[8, 6], [20, 15], [36, 27], [16, 12]]),
+            vector_1.outer(&vector_2)
+        )
+    }
+
+    #[test]
+    fn vec_dot_matrix() {
+        let vector: Vector<_, _> = [2, 5, 9, 4].into();
+        let matrix: Matrix<_, _, _> = [[4, 7], [5, 6], [1, 8], [2, 9]].into();
+
+        assert_eq!(Vector::<_, _>::from([50, 152]), vector.dot_mat(&matrix))
+    }
+
+    #[test]
+    fn matrix_dot_vec() {
+        let vector_1: Vector<_, _> = [2, 5, 9, 4].into();
+        let vector_2: Vector<_, _> = [4, 3, 1, 2].into();
+
+        assert_eq!(40, vector_1.dot_vec(&vector_2))
+    }
+
+    #[test]
+    fn matrix_outer_vec() {
+        let vector_1: Vector<_, _> = [2, 5, 9, 4].into();
+        let vector_2: Vector<_, _> = [4, 3].into();
+
+        assert_eq!(
+            Matrix::<_, _, _>::from([[8, 6], [20, 15], [36, 27], [16, 12]]),
+            vector_1.outer(&vector_2)
+        )
+    }
+
+    #[test]
+    fn matrix_dot_vector() {
+        let matrix: Matrix<_, _, _> = [[6, 4, 4, 3], [1, 1, 2, 2]].into();
+        let vector: Vector<_, _> = [9, 3, 5, 7].into();
+
+        assert_eq!(Vector::<_, _>::from([107, 36]), matrix.dot_vec(&vector))
+    }
+
+    #[test]
+    fn matrix_dot_matrix() {
+        let matrix_1: Matrix<_, _, _> = [[9, 3, 5], [7, 9, 5]].into();
+        let matrix_2: Matrix<_, _, _> = [[8, 2, 5, 4], [6, 8, 5, 8], [9, 6, 7, 3]].into();
+
+        assert_eq!(
+            Matrix::<_, _, _>::from([[135, 72, 95, 75], [155, 116, 115, 115]]),
+            matrix_1.dot_mat(&matrix_2)
+        )
+    }
+}

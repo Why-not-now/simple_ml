@@ -270,7 +270,7 @@ pub struct DropoutActivation {
 
 impl DropoutActivation {
     pub fn new(rate: f64) -> Option<Self> {
-        if rate.partial_cmp(&0.)? == Greater && rate.partial_cmp(&1.)? == Less {
+        if rate.partial_cmp(&0.)? != Greater || rate.partial_cmp(&1.)? != Less {
             return None;
         }
         Some(Self { rate })
@@ -282,7 +282,7 @@ impl FixedActivation for DropoutActivation {
 
     fn train_fn<R: RngExt>(&self, value: f64, rng: &mut R) -> (f64, Self::Cache) {
         let result = rng.random_range(0. ..1.) > self.rate;
-        (if result { value * (1. - self.rate) } else { 0. }, result)
+        (if result { value / (1. - self.rate) } else { 0. }, result)
     }
 
     fn predict_fn(&self, value: f64) -> f64 {

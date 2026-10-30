@@ -347,10 +347,10 @@ impl<const I: usize, const O: usize> Layer<I, O> for DenseLayer<I, O> {
             loss += self.biases.iter().sum::<f64>() * self.w_l1_reg;
         }
         if self.w_l2_reg != 0. {
-            loss += self.weights.iter().map(|weight| weight.powi(2)).sum::<f64>() * self.w_l1_reg;
+            loss += self.weights.iter().map(|weight| weight.powi(2)).sum::<f64>() * self.w_l2_reg;
         }
         if self.b_l2_reg != 0. {
-            loss += self.weights.iter().map(|bias| bias.powi(2)).sum::<f64>() * self.w_l1_reg;
+            loss += self.weights.iter().map(|bias| bias.powi(2)).sum::<f64>() * self.w_l2_reg;
         }
 
         loss
@@ -368,37 +368,26 @@ impl<const I: usize, const O: usize> Layer<I, O> for DenseLayer<I, O> {
         if self.w_l1_reg != 0. {
             let mut w_reg = self.weights;
             for weight in w_reg.iter_mut() {
-                *weight = if weight.is_sign_positive() {
-                    *weight
-                } else {
-                    -*weight
-                };
+                *weight = weight.signum() * self.w_l1_reg;
             }
-            w_reg.mul_left(self.w_l1_reg);
-            weights -= w_reg;
+            weights += w_reg;
         }
         if self.b_l1_reg != 0. {
             let mut b_reg = self.biases;
             for bias in b_reg.iter_mut() {
-                *bias = if bias.is_sign_positive() {
-                    *bias
-                } else {
-                    -*bias
-                };
+                *bias = bias.signum() * self.b_l1_reg;
             }
-            b_reg.mul_left(self.b_l1_reg);
-            biases -= b_reg;
+            biases += b_reg;
         }
         if self.w_l2_reg != 0. {
             let mut w_reg = self.weights;
             w_reg.mul_right(2. * self.w_l2_reg);
-            weights -= w_reg;
+            weights += w_reg;
         }
         if self.b_l2_reg != 0. {
             let mut b_reg = self.biases;
             b_reg.mul_right(2. * self.b_l2_reg);
-            b_reg.mul_left(self.b_l2_reg);
-            biases -= b_reg;
+            biases += b_reg;
         }
 
         let data = DenseLayerData { weights, biases };

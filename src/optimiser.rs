@@ -166,6 +166,41 @@ impl Optimiser for AdamOptimiser {
     type Data<C: LayerData> = AdamCache<C>;
 
     fn update<C: LayerData>(&self, mut gradient: C, cache: &mut Self::Data<C>) -> C {
+        // let a = (1. - self.mean_decay.pow(self.iteration as i32));
+        // println!("{a}");
+        let mut debug = String::new();
+        let mut sum = 0.;
+        let mut length = 0.;
+        for x in gradient.iter(){
+            sum += x * x;
+            length += 1.;
+        }
+        let avg = sum / length;
+        debug.push_str(&format!("grad2: {avg}\n"));
+        let mut sum = 0.;
+        let mut length = 0.;
+        for x in gradient.iter(){
+            sum += x.abs();
+            length += 1.;
+        }
+        let avg = sum / length;
+        debug.push_str(&format!("grad: {avg}\n"));
+        let mut sum = 0.;
+        let mut length = 0.;
+        for x in cache.variance.momentum.iter(){
+            sum += x;
+            length += 1.;
+        }
+        let avg = sum / length;
+        debug.push_str(&format!("var: {avg}\n"));
+        let mut sum = 0.;
+        let mut length = 0.;
+        for x in cache.mean.momentum.iter(){
+            sum += x.abs();
+            length += 1.;
+        }
+        let avg = sum / length;
+        debug.push_str(&format!("mean: {avg}\n"));
         cache.mean.momentum.merge_each(&gradient, |mom, grad| {
             self.mean_decay * mom + (1. - self.mean_decay) * grad
         });
@@ -179,6 +214,15 @@ impl Optimiser for AdamOptimiser {
         gradient.merge_each(&cache.variance.momentum, |grad, mom| {
             grad / ((mom / (1. - self.var_decay.pow(self.iteration as i32))).sqrt() + f64::EPSILON)
         });
+        let mut sum = 0.;
+        let mut length = 0.;
+        for x in gradient.iter(){
+            sum += x * x;
+            length += 1.;
+        }
+        let avg = sum / length;
+        debug.push_str(&format!("grad f: {avg}\n\n"));
+        // println!("{debug}");
         gradient
     }
 

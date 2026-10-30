@@ -108,7 +108,7 @@ impl<T: Loss, const N: usize> Layer<N, N> for LossLayer<T> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CategoricalLoss;
 
 impl Loss for CategoricalLoss {
@@ -143,7 +143,7 @@ impl Loss for CategoricalLoss {
     fn update<const N: usize>(&mut self, _change: LossCacheData<Self, N>) {}
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CategoricalLossCache<const N: usize> {
     predictions: Vector<f64, N>,
 }
@@ -176,7 +176,7 @@ impl<const N: usize> LossCache<N> for CategoricalLossCache<N> {
     fn into_data(self, _expected: Vector<f64, N>) -> Self::Data {}
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SoftmaxCategoricalLoss;
 
 impl Loss for SoftmaxCategoricalLoss {
@@ -211,7 +211,7 @@ impl Loss for SoftmaxCategoricalLoss {
     fn update<const N: usize>(&mut self, _change: LossCacheData<Self, N>) {}
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct JoinLossCache<const N: usize> {
     predictions: Vector<f64, N>,
 }
@@ -234,7 +234,7 @@ impl<const N: usize> LossCache<N> for JoinLossCache<N> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Gradient<const N: usize> {
     gradients: Vector<f64, N>,
 }
@@ -282,7 +282,7 @@ impl<const N: usize> LayerData for Gradient<N> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct JoinLoss;
 
 impl Loss for JoinLoss {

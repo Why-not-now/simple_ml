@@ -27,7 +27,7 @@ type FullLossData<L, F, const I: usize, const O: usize> =
 //     accuracy: Option<f64>,
 // }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Model<L, F, Q, const I: usize, const O: usize>
 where
     L: Layer<I, O>,

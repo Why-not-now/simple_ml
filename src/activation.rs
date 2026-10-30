@@ -54,6 +54,7 @@ pub trait FixedActivation {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ActivationLayer<T: FixedActivation>(T);
 
 impl<T: FixedActivation> FixedActivation for ActivationLayer<T> {
@@ -129,7 +130,7 @@ impl<T: FixedActivation, const N: usize> Layer<N, N> for ActivationLayer<T> {
     fn update(&mut self, _change: Self::Data) {}
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LinearActivation;
 
 impl FixedActivation for LinearActivation {
@@ -148,7 +149,7 @@ impl FixedActivation for LinearActivation {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ReluActivation;
 
 impl FixedActivation for ReluActivation {
@@ -169,7 +170,7 @@ impl FixedActivation for ReluActivation {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LeakyreluActivation {
     coefficient: f64,
 }
@@ -205,7 +206,7 @@ impl FixedActivation for LeakyreluActivation {
 
 // TODO: Prelu, use https://github.com/christianversloot/machine-learning-articles/blob/main/how-to-use-prelu-with-keras.md
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RreluActivation {
     lower_bound: f64,
     upper_bound: f64,
@@ -238,7 +239,7 @@ impl FixedActivation for RreluActivation {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DropoutActivation {
     rate: f64,
 }
@@ -260,7 +261,7 @@ impl FixedActivation for DropoutActivation {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SigmoidActivation;
 
 impl FixedActivation for SigmoidActivation {
@@ -280,7 +281,7 @@ impl FixedActivation for SigmoidActivation {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TanhActivation;
 
 impl FixedActivation for TanhActivation {
@@ -300,7 +301,7 @@ impl FixedActivation for TanhActivation {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Softmax;
 
 impl<const N: usize> Layer<N, N> for Softmax {

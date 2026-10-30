@@ -111,7 +111,7 @@ impl LayerData for () {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MergedData<A, B> {
     left: A,
     right: B,
@@ -125,11 +125,11 @@ impl<A, B> MergedData<A, B>{
 
 impl<A: LayerData, B: LayerData> LayerData for MergedData<A, B> {
     type Iter<'a>
-        = Chain<<A as LayerData>::Iter<'a>, <B as LayerData>::Iter<'a>>
+        = Chain<A::Iter<'a>, B::Iter<'a>>
     where
         Self: 'a;
     type IterMut<'a>
-        = Chain<<A as LayerData>::IterMut<'a>, <B as LayerData>::IterMut<'a>>
+        = Chain<A::IterMut<'a>, B::IterMut<'a>>
     where
         Self: 'a;
 
@@ -149,7 +149,7 @@ impl<A: LayerData, B: LayerData> LayerData for MergedData<A, B> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MergedLayer<
     const I: usize,
     const M: usize,
@@ -215,7 +215,7 @@ impl<const I: usize, const M: usize, const O: usize, A: Layer<I, M>, B: Layer<M,
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DenseLayerData<const I: usize, const O: usize> {
     weights: Matrix<f64, O, I>,
     biases: Vector<f64, O>,
@@ -247,7 +247,7 @@ impl<const I: usize, const O: usize> LayerData for DenseLayerData<I, O> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DenseLayer<const I: usize, const O: usize> {
     weights: Matrix<f64, O, I>,
     biases: Vector<f64, O>,
@@ -331,11 +331,11 @@ impl<const I: usize, const O: usize> Layer<I, O> for DenseLayer<I, O> {
         inputs: Vector<f64, I>,
         _rng: &mut R,
     ) -> (Vector<f64, O>, Self::Cache) {
-        (self.weights.dot_vec(&inputs), inputs)
+        (self.weights.dot_vec(&inputs) + self.biases, inputs)
     }
 
     fn predict(&self, inputs: Vector<f64, I>) -> Vector<f64, O> {
-        self.weights.dot_vec(&inputs)
+        self.weights.dot_vec(&inputs) + self.biases
     }
 
     fn loss(&self) -> f64 {
@@ -362,7 +362,7 @@ impl<const I: usize, const O: usize> Layer<I, O> for DenseLayer<I, O> {
         cache: Self::Cache,
         gradient: Vector<f64, O>,
     ) -> (Vector<f64, I>, Self::Data) {
-        let mut biases: Vector<f64, O> = gradient;
+        let mut biases = gradient;
         let mut weights = biases.outer(&cache);
         let backprop = biases.dot_mat(&self.weights);
 
@@ -407,7 +407,7 @@ impl<const I: usize, const O: usize> Layer<I, O> for DenseLayer<I, O> {
     }
 
     fn update(&mut self, change: Self::Data) {
-        self.weights += change.weights;
-        self.biases += change.biases;
+        self.weights -= change.weights;
+        self.biases -= change.biases;
     }
 }

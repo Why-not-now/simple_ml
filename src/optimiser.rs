@@ -16,10 +16,16 @@ impl OptimiserData for () {
     fn empty() -> Self {}
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BasicOptimiser {
     l_rate: f64,
     decay: f64,
+}
+
+impl BasicOptimiser {
+    pub fn new(l_rate: f64, decay: f64) -> Self {
+        Self { l_rate, decay }
+    }
 }
 
 impl Optimiser for BasicOptimiser {
@@ -31,11 +37,11 @@ impl Optimiser for BasicOptimiser {
     }
 
     fn finish_iteration(&mut self) {
-        self.l_rate *= self.decay;
+        self.l_rate *= 1. - self.decay;
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MomentumOptimiser {
     l_rate: f64,
     decay: f64,
@@ -64,11 +70,11 @@ impl Optimiser for MomentumOptimiser {
     }
 
     fn finish_iteration(&mut self) {
-        self.l_rate *= self.decay;
+        self.l_rate *= 1. - self.decay;
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MomentumCache<C: LayerData> {
     momentum: C,
 }
@@ -93,11 +99,21 @@ impl<C: LayerData> Default for MomentumCache<C> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RMSpropOptimiser {
     l_rate: f64,
     decay: f64,
     m_rate: f64,
+}
+
+impl RMSpropOptimiser {
+    pub fn new(l_rate: f64, decay: f64, m_rate: f64) -> Self {
+        Self {
+            l_rate,
+            decay,
+            m_rate,
+        }
+    }
 }
 
 impl Optimiser for RMSpropOptimiser {
@@ -114,11 +130,11 @@ impl Optimiser for RMSpropOptimiser {
     }
 
     fn finish_iteration(&mut self) {
-        self.l_rate *= self.decay;
+        self.l_rate *= 1. - self.decay;
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AdamOptimiser {
     l_rate: f64,     // 0.001
     mean_decay: f64, // 0.9
@@ -132,7 +148,7 @@ impl AdamOptimiser {
             l_rate,
             mean_decay,
             var_decay,
-            iteration: 0,
+            iteration: 1,
         }
     }
 
@@ -141,7 +157,7 @@ impl AdamOptimiser {
             l_rate: 0.001,
             mean_decay: 0.9,
             var_decay: 0.999,
-            iteration: 0,
+            iteration: 1,
         }
     }
 }
@@ -161,7 +177,7 @@ impl Optimiser for AdamOptimiser {
             self.l_rate * (mom / (1. - self.mean_decay.pow(self.iteration as i32)))
         });
         gradient.merge_each(&cache.variance.momentum, |grad, mom| {
-            grad / (mom / (1. - self.var_decay.pow(self.iteration as i32)) + f64::EPSILON).sqrt()
+            grad / ((mom / (1. - self.var_decay.pow(self.iteration as i32))).sqrt() + f64::EPSILON)
         });
         gradient
     }
@@ -171,7 +187,7 @@ impl Optimiser for AdamOptimiser {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AdamCache<C: LayerData> {
     mean: MomentumCache<C>,
     variance: MomentumCache<C>,

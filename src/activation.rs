@@ -1,4 +1,7 @@
-use std::mem::MaybeUninit;
+use std::{
+    cmp::Ordering::{Greater, Less},
+    mem::MaybeUninit,
+};
 
 use rand::prelude::RngExt;
 
@@ -175,6 +178,15 @@ pub struct LeakyreluActivation {
     coefficient: f64,
 }
 
+impl LeakyreluActivation {
+    pub fn new(coefficient: f64) -> Option<Self> {
+        if coefficient.partial_cmp(&1.)? != Less {
+            return None;
+        }
+        Some(Self { coefficient })
+    }
+}
+
 impl FixedActivation for LeakyreluActivation {
     type Cache = bool;
 
@@ -212,6 +224,18 @@ pub struct RreluActivation {
     upper_bound: f64,
 }
 
+impl RreluActivation {
+    pub fn new(lower_bound: f64, upper_bound: f64) -> Option<Self> {
+        if lower_bound.partial_cmp(&upper_bound)? != Less {
+            return None;
+        }
+        Some(Self {
+            lower_bound,
+            upper_bound,
+        })
+    }
+}
+
 impl FixedActivation for RreluActivation {
     type Cache = f64;
 
@@ -242,6 +266,15 @@ impl FixedActivation for RreluActivation {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DropoutActivation {
     rate: f64,
+}
+
+impl DropoutActivation {
+    pub fn new(rate: f64) -> Option<Self> {
+        if rate.partial_cmp(&0.)? == Greater && rate.partial_cmp(&1.)? == Less {
+            return None;
+        }
+        Some(Self { rate })
+    }
 }
 
 impl FixedActivation for DropoutActivation {

@@ -1,7 +1,6 @@
 use std::iter::{Chain, empty};
 use std::{array, iter::Empty};
 
-use num_traits::Pow;
 use rand::prelude::RngExt;
 use rand_distr::{Normal, StandardNormal};
 
@@ -348,10 +347,10 @@ impl<const I: usize, const O: usize> Layer<I, O> for DenseLayer<I, O> {
             loss += self.biases.iter().sum::<f64>() * self.w_l1_reg;
         }
         if self.w_l2_reg != 0. {
-            loss += self.weights.iter().map(|weight| weight.pow(2)).sum::<f64>() * self.w_l1_reg;
+            loss += self.weights.iter().map(|weight| weight.powi(2)).sum::<f64>() * self.w_l1_reg;
         }
         if self.b_l2_reg != 0. {
-            loss += self.weights.iter().map(|bias| bias.pow(2)).sum::<f64>() * self.w_l1_reg;
+            loss += self.weights.iter().map(|bias| bias.powi(2)).sum::<f64>() * self.w_l1_reg;
         }
 
         loss

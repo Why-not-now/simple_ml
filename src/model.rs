@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use rand::prelude::*;
 
 use crate::layer::{Full, Layer, LayerData, MergedData,};
@@ -120,11 +119,12 @@ where
             .iter()
             .zip(expected.iter())
             .map(train_once)
-            .tree_reduce(|mut left, right| {
+            .reduce(|mut left, right| {
                 left.merge_each(&right, |left, right| left + right);
                 left
             })
             .expect("inputs batch should not be empty");
+        // TODO: use tree_reduce, currently stack is overflowing
 
         self.update(loss_data);
 

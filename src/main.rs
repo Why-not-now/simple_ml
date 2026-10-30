@@ -5,7 +5,8 @@ use simple_ml::layer::{DenseLayer, Full, Layer};
 use simple_ml::loss::{CategoricalLoss, Loss, SoftmaxCategoricalLoss};
 use simple_ml::model::Model;
 use simple_ml::optimiser::AdamOptimiser;
-use simple_ml::{datasets, split_test};
+use simple_ml::split_test;
+use simple_ml::datasets;
 
 fn main() {
     let mut rng = rand::rng();

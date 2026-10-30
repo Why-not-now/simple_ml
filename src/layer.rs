@@ -117,7 +117,7 @@ pub struct MergedData<A, B> {
     right: B,
 }
 
-impl<A, B> MergedData<A, B>{
+impl<A, B> MergedData<A, B> {
     pub fn destruct(self) -> (A, B) {
         (self.left, self.right)
     }
@@ -309,8 +309,7 @@ impl<const I: usize, const O: usize> DenseLayer<I, O> {
         }
     }
 
-    pub fn new_default<R: RngExt>(rng: &mut R
-    ) -> Self {
+    pub fn new_default<R: RngExt>(rng: &mut R) -> Self {
         Self {
             weights: Self::normal_xavier_weights(rng),
             biases: Self::zero_bias(),
@@ -348,7 +347,12 @@ impl<const I: usize, const O: usize> Layer<I, O> for DenseLayer<I, O> {
             loss += self.biases.iter().sum::<f64>() * self.w_l1_reg;
         }
         if self.w_l2_reg != 0. {
-            loss += self.weights.iter().map(|weight| weight.powi(2)).sum::<f64>() * self.w_l2_reg;
+            loss += self
+                .weights
+                .iter()
+                .map(|weight| weight.powi(2))
+                .sum::<f64>()
+                * self.w_l2_reg;
         }
         if self.b_l2_reg != 0. {
             loss += self.weights.iter().map(|bias| bias.powi(2)).sum::<f64>() * self.w_l2_reg;
@@ -398,5 +402,118 @@ impl<const I: usize, const O: usize> Layer<I, O> for DenseLayer<I, O> {
     fn update(&mut self, change: Self::Data) {
         self.weights -= change.weights;
         self.biases -= change.biases;
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WeightLayerData<const I: usize, const O: usize> {
+    weights: Matrix<f64, O, I>,
+}
+
+impl<const I: usize, const O: usize> LayerData for WeightLayerData<I, O> {
+    type Iter<'a> = <&'a Matrix<f64, O, I> as IntoIterator>::IntoIter;
+    type IterMut<'a> = <&'a mut Matrix<f64, O, I> as IntoIterator>::IntoIter;
+
+    fn zeroes() -> Self {
+        WeightLayerData {
+            weights: Matrix::new([[0.; I]; O]),
+        }
+    }
+
+    fn iter(&self) -> Self::Iter<'_> {
+        self.weights.iter()
+    }
+
+    fn iter_mut(&mut self) -> Self::IterMut<'_> {
+        self.weights.iter_mut()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WeightLayer<const I: usize, const O: usize> {
+    weights: Matrix<f64, O, I>,
+    w_l1_reg: f64,
+    w_l2_reg: f64,
+}
+
+impl<const I: usize, const O: usize> WeightLayer<I, O> {
+    pub fn new(weights: Matrix<f64, O, I>, w_l1_reg: f64, w_l2_reg: f64) -> Self {
+        Self {
+            weights,
+            w_l1_reg,
+            w_l2_reg,
+        }
+    }
+
+    pub fn new_default<R: RngExt>(rng: &mut R) -> Self {
+        Self {
+            weights: DenseLayer::normal_xavier_weights(rng),
+            w_l1_reg: 0.,
+            w_l2_reg: 5e-4,
+        }
+    }
+}
+
+impl<const I: usize, const O: usize> Layer<I, O> for WeightLayer<I, O> {
+    type Cache = Vector<f64, I>;
+    type Data = WeightLayerData<I, O>;
+
+    fn train<R: RngExt>(
+        &self,
+        inputs: Vector<f64, I>,
+        _rng: &mut R,
+    ) -> (Vector<f64, O>, Self::Cache) {
+        (self.weights.dot_vec(&inputs), inputs)
+    }
+
+    fn predict(&self, inputs: Vector<f64, I>) -> Vector<f64, O> {
+        self.weights.dot_vec(&inputs)
+    }
+
+    fn loss(&self) -> f64 {
+        let mut loss = 0.;
+
+        if self.w_l1_reg != 0. {
+            loss += self.weights.iter().sum::<f64>() * self.w_l1_reg;
+        }
+        if self.w_l2_reg != 0. {
+            loss += self
+                .weights
+                .iter()
+                .map(|weight| weight.powi(2))
+                .sum::<f64>()
+                * self.w_l2_reg;
+        }
+
+        loss
+    }
+
+    fn backward(
+        &self,
+        cache: Self::Cache,
+        gradient: Vector<f64, O>,
+    ) -> (Vector<f64, I>, Self::Data) {
+        let mut weights = gradient.outer(&cache);
+        let backprop = gradient.dot_mat(&self.weights);
+
+        if self.w_l1_reg != 0. {
+            let mut w_reg = self.weights;
+            for weight in w_reg.iter_mut() {
+                *weight = weight.signum() * self.w_l1_reg;
+            }
+            weights += w_reg;
+        }
+        if self.w_l2_reg != 0. {
+            let mut w_reg = self.weights;
+            w_reg.mul_right(2. * self.w_l2_reg);
+            weights += w_reg;
+        }
+
+        let data = WeightLayerData { weights };
+        (backprop, data)
+    }
+
+    fn update(&mut self, change: Self::Data) {
+        self.weights -= change.weights;
     }
 }

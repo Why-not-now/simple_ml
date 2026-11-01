@@ -47,8 +47,13 @@ pub trait Layer<const I: usize, const O: usize> {
             right: other,
         }
     }
-    fn into_box(self) -> BoxLayer<I, O, Self> where Self: std::marker::Sized {
-        BoxLayer { layer: Box::new(self) }
+    fn into_box(self) -> BoxLayer<I, O, Self>
+    where
+        Self: std::marker::Sized,
+    {
+        BoxLayer {
+            layer: Box::new(self),
+        }
     }
 }
 
@@ -158,7 +163,7 @@ pub struct BoxLayer<const I: usize, const O: usize, L: Layer<I, O>> {
 }
 
 impl<const I: usize, const O: usize, L: Layer<I, O>> Layer<I, O> for BoxLayer<I, O, L> {
-    type Cache = BoxLayerData<L::Cache>;
+    type Cache = Box<L::Cache>;
     type Data = BoxLayerData<L::Data>;
 
     fn train<R: RngExt>(
@@ -168,12 +173,7 @@ impl<const I: usize, const O: usize, L: Layer<I, O>> Layer<I, O> for BoxLayer<I,
     ) -> (Vector<f64, O>, Self::Cache) {
         let (output, cache) = self.layer.train(inputs, rng);
 
-        (
-            output,
-            BoxLayerData {
-                data: Box::new(cache),
-            },
-        )
+        (output, Box::new(cache))
     }
 
     fn predict(&self, inputs: Vector<f64, I>) -> Vector<f64, O> {
@@ -189,7 +189,7 @@ impl<const I: usize, const O: usize, L: Layer<I, O>> Layer<I, O> for BoxLayer<I,
         cache: Self::Cache,
         gradient: Vector<f64, O>,
     ) -> (Vector<f64, I>, Self::Data) {
-        let (delta, cache) = self.layer.backward(*cache.data, gradient);
+        let (delta, cache) = self.layer.backward(*cache, gradient);
 
         (
             delta,
@@ -205,7 +205,7 @@ impl<const I: usize, const O: usize, L: Layer<I, O>> Layer<I, O> for BoxLayer<I,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BoxLayerData<D> {
+pub struct BoxLayerData<D: LayerData> {
     data: Box<D>,
 }
 

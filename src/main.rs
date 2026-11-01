@@ -26,7 +26,7 @@ fn main() {
         5e-4,
         0.,
         5e-4,
-    );
+    ).into_box();
     let layers = layers.merge::<ActivationLayer<_>, _>(ReluActivation.into());
     let layers = layers.merge(L2::new(
         L2::normal_xavier_weights(&mut rng),
@@ -49,7 +49,7 @@ fn main() {
         5e-4,
         0.,
         5e-4,
-    ));
+    )).into_box();
     let layers = layers.merge::<ActivationLayer<_>, _>(
         DropoutActivation::new(0.25)
             .expect("droupout rate should be between 0 and 1")
@@ -63,7 +63,7 @@ fn main() {
         5e-4,
         0.,
         5e-4,
-    ));
+    )).into_box();
     let layers = layers.merge::<ActivationLayer<_>, _>(
         DropoutActivation::new(0.25)
             .expect("droupout rate should be between 0 and 1")
@@ -77,7 +77,7 @@ fn main() {
         0.,
         0.,
         0.,
-    ));
+    )).into_box();
     let layers = layers.merge::<ActivationLayer<_>, _>(
         DropoutActivation::new(0.25)
             .expect("droupout rate should be between 0 and 1")

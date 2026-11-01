@@ -47,6 +47,9 @@ pub trait Layer<const I: usize, const O: usize> {
             right: other,
         }
     }
+    fn into_box(self) -> BoxLayer<I, O, Self> where Self: std::marker::Sized {
+        BoxLayer { layer: Box::new(self) }
+    }
 }
 
 pub trait LayerData {
@@ -146,6 +149,88 @@ impl<A: LayerData, B: LayerData> LayerData for MergedData<A, B> {
 
     fn iter_mut(&mut self) -> Self::IterMut<'_> {
         self.left.iter_mut().chain(self.right.iter_mut())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BoxLayer<const I: usize, const O: usize, L: Layer<I, O>> {
+    layer: Box<L>,
+}
+
+impl<const I: usize, const O: usize, L: Layer<I, O>> Layer<I, O> for BoxLayer<I, O, L> {
+    type Cache = BoxLayerData<L::Cache>;
+    type Data = BoxLayerData<L::Data>;
+
+    fn train<R: RngExt>(
+        &self,
+        inputs: Vector<f64, I>,
+        rng: &mut R,
+    ) -> (Vector<f64, O>, Self::Cache) {
+        let (output, cache) = self.layer.train(inputs, rng);
+
+        (
+            output,
+            BoxLayerData {
+                data: Box::new(cache),
+            },
+        )
+    }
+
+    fn predict(&self, inputs: Vector<f64, I>) -> Vector<f64, O> {
+        self.layer.predict(inputs)
+    }
+
+    fn loss(&self) -> f64 {
+        self.layer.loss()
+    }
+
+    fn backward(
+        &self,
+        cache: Self::Cache,
+        gradient: Vector<f64, O>,
+    ) -> (Vector<f64, I>, Self::Data) {
+        let (delta, cache) = self.layer.backward(*cache.data, gradient);
+
+        (
+            delta,
+            BoxLayerData {
+                data: Box::new(cache),
+            },
+        )
+    }
+
+    fn update(&mut self, change: Self::Data) {
+        self.layer.update(*change.data);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BoxLayerData<D> {
+    data: Box<D>,
+}
+
+impl<D: LayerData> LayerData for BoxLayerData<D> {
+    type Iter<'a>
+        = D::Iter<'a>
+    where
+        Self: 'a;
+    type IterMut<'a>
+        = D::IterMut<'a>
+    where
+        Self: 'a;
+
+    fn zeroes() -> Self {
+        BoxLayerData {
+            data: D::zeroes().into(),
+        }
+    }
+
+    fn iter(&self) -> Self::Iter<'_> {
+        self.data.iter()
+    }
+
+    fn iter_mut(&mut self) -> Self::IterMut<'_> {
+        self.data.iter_mut()
     }
 }
 
